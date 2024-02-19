@@ -1,0 +1,16 @@
+[workspace]
+[package]
+version = "0.1.0"
+name = "sp1-evm-coprocessor"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git" }
+alloy-primitives = { git = "https://github.com/succinctlabs/alloy-core-private.git" }
+alloy-dyn-abi = { git = "https://github.com/succinctlabs/alloy-core-private.git" }
+rlp = "0.5.2"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+serde = { version = "1.0.196", features = ["derive"] }
+
+[patch.crates-io]
+tiny-keccak = { git = "https://github.com/succinctlabs/tiny-keccak-private.git", branch = "chris/test" }
