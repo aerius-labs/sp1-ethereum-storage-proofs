@@ -13,8 +13,6 @@ fn main() {
 
     let trie_proof = get_storage_proof(eth_address, storage_key, block_number);
 
-    println!("hash: {:?}", trie_proof.1);
-
     let mut stdin = SP1Stdin::new();
     let start = std::time::Instant::now();
     stdin.write(&trie_proof.0);
@@ -25,8 +23,12 @@ fn main() {
 
     println!("Proof generation time: {:?}", end.duration_since(start));
 
-    let value = proof.stdout.read::<bool>();
-    assert_eq!(value, true);
+    let value = proof.stdout.read::<String>();
+
+    println!("storage slot value: {}", value);
+
+    let ok = proof.stdout.read::<bool>();
+    assert_eq!(ok, true);
 
     let start = std::time::Instant::now();
     // Verify proof.
