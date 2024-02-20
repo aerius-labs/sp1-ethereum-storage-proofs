@@ -65,6 +65,14 @@ The project includes several key components:
 
 - `StorageProof`: A custom data structure to encapsulate the storage proof, including the key, proof nodes, and key pointers necessary for zk proof generation.
 
+## Benchmarks
+Number of levels to storage root - 5
+
+| Hardware | Proof gen | Proof verification |
+-----------|-----------|--------------------|
+| Apple silicon M1 | 6.1 s | 500 ms         |
+| AMD Ryzen 9 5900X | 5.3 s | 405 ms        |
+
 ## Additional Information
 
 For more details on SP1 zkVM and its capabilities, refer to the [Succinct Labs documentation](https://succinctlabs.github.io/sp1/). This documentation provides comprehensive guidance on working with the SP1 Prover and Verifier, alongside other advanced features of the SP1 zkVM.
