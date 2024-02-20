@@ -98,7 +98,7 @@ pub fn get_storage_proof(
 
     (
         StorageProof {
-            key: key.to_string(),
+            key: key_hash.to_string(),
             proof,
             key_ptrs,
         },
@@ -234,8 +234,7 @@ mod tests {
 
         let depth = sp.proof.len();
 
-        let mut key_as_chars = sp.key.chars();
-        let mut prev_offset = 0;
+        let key_nibbles = sp.key.chars().map(|x| x.to_digit(16).unwrap() as usize).collect::<Vec<_>>();
 
         for (i, p) in sp.proof.iter().enumerate() {
             let bytes = hex::decode(&p).expect("Decoding proof failed");
@@ -248,10 +247,9 @@ mod tests {
 
             let decoded_list = Rlp::new(&bytes);
 
-            let offset = key_as_chars.ch (key_ptrs[i]).unwrap();
-
             if i < depth - 1 {
-                current_hash = hex::encode(decoded_list.iter().collect::<Vec<_>>()[key_ptrs[i]].data().unwrap());
+                let nibble = key_nibbles[key_ptrs[i]];
+                current_hash = hex::encode(decoded_list.iter().collect::<Vec<_>>()[nibble].data().unwrap());
             }
         }
 
