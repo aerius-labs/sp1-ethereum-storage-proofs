@@ -46,10 +46,14 @@ pub fn main() {
             // verify value
             let leaf_node = decoded_list.iter().collect::<Vec<_>>();
             assert_eq!(leaf_node.len(), 2);
-            let value = hex::encode(leaf_node[1].data().unwrap());
+            let value_decoded = Rlp::new(leaf_node[1].data().unwrap());
+            assert!(value_decoded.is_data());
+            let value = hex::encode(value_decoded.data().unwrap());
 
             sp1_zkvm::io::write(&value);
         }
+
+
     }
 
     sp1_zkvm::io::write(&true);
