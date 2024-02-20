@@ -195,6 +195,7 @@ mod tests {
     use anyhow::Result;
     use rlp::Rlp;
     use sha3::{Digest, Keccak256};
+    use hex;
 
     #[test]
     fn test_branch_split() -> Result<()> {
@@ -246,10 +247,20 @@ mod tests {
             assert_eq!(&hex::encode(res), &current_hash);
 
             let decoded_list = Rlp::new(&bytes);
+            assert!(decoded_list.is_list());
 
             if i < depth - 1 {
                 let nibble = key_nibbles[key_ptrs[i]];
                 current_hash = hex::encode(decoded_list.iter().collect::<Vec<_>>()[nibble].data().unwrap());
+            } else {
+                // verify value
+                let leaf_node = decoded_list.iter().collect::<Vec<_>>();
+                assert_eq!(leaf_node.len(), 2);
+                let value_decoded = Rlp::new(leaf_node[1].data().unwrap());
+                assert!(value_decoded.is_data());
+                let value = hex::encode(value_decoded.data().unwrap());
+
+                println!("value: {:?}", value);
             }
         }
 
