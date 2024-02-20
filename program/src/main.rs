@@ -2,11 +2,7 @@
 
 #![no_main]
 
-use alloy_dyn_abi::DynSolType;
-use alloy_primitives::{
-    hex::{self, FromHex},
-    keccak256, FixedBytes, Keccak256,
-};
+use alloy_primitives::{ hex, Keccak256 };
 use rlp::Rlp;
 sp1_zkvm::entrypoint!(main);
 
