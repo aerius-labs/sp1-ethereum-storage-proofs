@@ -30,6 +30,8 @@ pub fn main() {
 
     let depth = sp.proof.len();
 
+    let key_nibbles = sp.key.chars().map(|x| x.to_digit(16).unwrap() as usize).collect::<Vec<_>>();
+
     for (i, p) in sp.proof.iter().enumerate() {
         let bytes = hex::decode(&p).expect("Decoding proof failed");
 
@@ -37,46 +39,22 @@ pub fn main() {
         hasher.update(&bytes);
         let res = hasher.finalize();
 
-
-
-        // sp1_zkvm::io::write(&true);
-        // assert_eq!(&hex::encode(res), &current_hash);
+        assert_eq!(&hex::encode(res), &current_hash);
 
         let decoded_list = Rlp::new(&bytes);
 
-        sp1_zkvm::io::write(&true);
-
         if i < depth - 1 {
-            current_hash = decoded_list.as_list::<String>().unwrap()[key_ptrs[i]].clone();
+            let nibble = key_nibbles[key_ptrs[i]];
+            current_hash = hex::encode(decoded_list.iter().collect::<Vec<_>>()[nibble].data().unwrap());
+        } else {
+            // verify value
+            let leaf_node = decoded_list.iter().collect::<Vec<_>>();
+            assert_eq!(leaf_node.len(), 2);
+            let value = hex::encode(leaf_node[1].data().unwrap());
+
+            sp1_zkvm::io::write(&value);
         }
     }
 
     sp1_zkvm::io::write(&true);
 }
-
-// fn rlp_decode_and_pretty_print(proof: Vec<&str>) -> (Vec<Vec<String>>, Vec<String>) {
-//     let mut decoded_nodes: Vec<Vec<String>> = Vec::new();
-//     let mut hashes: Vec<String> = Vec::new();
-//     for (i, p) in proof.iter().enumerate() {
-//         // Remove the "0x" prefix and decode the hex string
-//         let bytes = hex::decode(&p[2..]).expect("Decoding failed");
-//         let mut in_res: Vec<String> = Vec::new();
-//         // Calculate the Keccak hash
-//         let mut hasher = Keccak256::new();
-//         hasher.update(&bytes);
-//         let res = hasher.finalize();
-//         let hash = format!("0x{}", hex::encode(res));
-//         hashes.push(hash.clone());
-//         println!("hash {}: {}", i, hash);
-//         // Decode using RLP
-//         let decoded_list = Rlp::new(&bytes);
-//         println!("Element {}:", i + 1);
-//         for (j, value) in decoded_list.iter().enumerate() {
-//             let hex_representation = format!("0x{}", hex::encode(value.data().unwrap()));
-//             println!("\tValue {}: {}", j + 1, hex_representation);
-//             in_res.push(hex_representation);
-//         }
-//         decoded_nodes.push(in_res);
-//     }
-//     (decoded_nodes, hashes)
-// }

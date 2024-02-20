@@ -3,4 +3,4 @@ target
 .idea
 .vscode
 
-proof-with-io.json
+**/proof-with-io.json
