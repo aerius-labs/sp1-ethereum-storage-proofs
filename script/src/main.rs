@@ -30,6 +30,9 @@ fn main() {
     let ok = proof.stdout.read::<bool>();
     assert_eq!(ok, true);
 
+    let state_root = proof.stdout.read::<String>();
+    println!("state root: {}", state_root);
+
     let start = std::time::Instant::now();
     // Verify proof.
     SP1Verifier::verify(ELF, &proof).expect("verification failed");

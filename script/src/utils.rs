@@ -1,7 +1,7 @@
 use rlp::Rlp;
 use std::process::Command;
 
-use crate::trie::{MAX_SP_NODE_LENGTH, StorageProof, VALUE_LEN};
+use crate::trie::{MAX_SP_NODE_LENGTH, StorageProof};
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
 
@@ -46,6 +46,9 @@ pub fn get_storage_proof(
     let storage_proof_value = parsed["result"]["storageProof"].clone();
     let storage_proof = storage_proof_value.as_array().unwrap()[0].clone();
 
+    let account_proof_vaue = parsed["result"]["accountProof"].clone();
+    let account_proof = account_proof_vaue.as_array().unwrap().clone();
+
     let storage_hash = parsed["result"]["storageHash"].as_str().unwrap();
     let storage_hash = &storage_hash[2..];
 
@@ -74,6 +77,28 @@ pub fn get_storage_proof(
     let key_ptrs = split_key_at_branches(key_as_str.as_str(), &decoded);
     println!("key_slices: {:?}", key_ptrs);
 
+    let address_bytes = hex::decode(odd_to_even_hex(&eth_address[2..])).unwrap();
+    println!("address: {:?}", eth_address);
+    let mut hasher = Keccak256::new();
+    hasher.update(&address_bytes);
+    let result = hasher.finalize();
+    let address_hash_bytes = result.to_vec();
+    let address_hash = hex::encode(address_hash_bytes);
+    println!("hashed key: {:?}", address_hash);
+
+    let account_path_as_str = account_proof
+        .iter()
+        .map(|element| {
+            let element = element.as_str().unwrap();
+            element
+        })
+        .collect::<Vec<&str>>();
+
+    let (decoded, _hashes) = rlp_decode_and_pretty_print(account_path_as_str.clone());
+    let account_key_as_str = hex::encode(key.clone());
+    let account_key_ptrs = split_key_at_branches(account_key_as_str.as_str(), &decoded);
+    println!("account_key_slices: {:?}", account_key_ptrs);
+
     let proof_bytes = proof
         .iter()
         .map(|element| {
@@ -87,6 +112,7 @@ pub fn get_storage_proof(
     let node_lengths = calculate_node_lengths_sans_trailing_zeros(&proof_bytes);
 
     let proof = path_as_str.iter().map(|x| x[2..].to_string()).collect::<Vec<String>>();
+    let account_proof = account_path_as_str.iter().map(|x| x[2..].to_string()).collect::<Vec<String>>();
 
     println!("proof: {:?}", proof);
     println!("node_lengths: {:?}", node_lengths);
@@ -98,9 +124,12 @@ pub fn get_storage_proof(
 
     (
         StorageProof {
-            key: key_hash.to_string(),
-            proof,
+            address_hash: address_hash.to_string(),
+            account_proof,
+            storage_key: key_hash.to_string(),
+            storage_proof: proof,
             key_ptrs,
+            account_key_ptrs
         },
         storage_hash.to_owned()
     )
@@ -229,15 +258,18 @@ mod tests {
 
         let trie_proof = get_storage_proof(eth_address, storage_key, block_number);
         let sp = trie_proof.0;
-        let mut current_hash = trie_proof.1;
+        let mut current_hash = trie_proof.1.clone();
 
         let key_ptrs = sp.key_ptrs;
+        let account_key_ptrs = sp.account_key_ptrs;
 
-        let depth = sp.proof.len();
+        let depth_sp = sp.storage_proof.len();
+        let depth_ap = sp.account_proof.len();
 
-        let key_nibbles = sp.key.chars().map(|x| x.to_digit(16).unwrap() as usize).collect::<Vec<_>>();
+        let key_nibbles = sp.storage_key.chars().map(|x| x.to_digit(16).unwrap() as usize).collect::<Vec<_>>();
+        let account_key_nibbles = sp.address_hash.chars().map(|x| x.to_digit(16).unwrap() as usize).collect::<Vec<_>>();
 
-        for (i, p) in sp.proof.iter().enumerate() {
+        for (i, p) in sp.storage_proof.iter().enumerate() {
             let bytes = hex::decode(&p).expect("Decoding proof failed");
 
             let mut hasher = Keccak256::new();
@@ -249,7 +281,7 @@ mod tests {
             let decoded_list = Rlp::new(&bytes);
             assert!(decoded_list.is_list());
 
-            if i < depth - 1 {
+            if i < depth_sp - 1 {
                 let nibble = key_nibbles[key_ptrs[i]];
                 current_hash = hex::encode(decoded_list.iter().collect::<Vec<_>>()[nibble].data().unwrap());
             } else {
@@ -261,6 +293,38 @@ mod tests {
                 let value = hex::encode(value_decoded.data().unwrap());
 
                 println!("value: {:?}", value);
+            }
+        }
+
+        let mut state_root: String;
+        let mut current_hash: String = "".to_string();
+        for (i, p) in sp.account_proof.iter().enumerate() {
+            let bytes = hex::decode(&p).expect("Decoding proof failed");
+
+            let mut hasher = Keccak256::new();
+            hasher.update(&bytes);
+            let res = hasher.finalize();
+
+            if i == 0 {
+                state_root = hex::encode(res);
+            } else {
+                assert_eq!(&hex::encode(res), &current_hash);
+            }
+
+            let decoded_list = Rlp::new(&bytes);
+            assert!(decoded_list.is_list());
+
+            if i < depth_ap - 1 {
+                let nibble = account_key_nibbles[account_key_ptrs[i]];
+                current_hash = hex::encode(decoded_list.iter().collect::<Vec<_>>()[nibble].data().unwrap());
+            } else {
+                // verify value
+                let leaf_node = decoded_list.iter().collect::<Vec<_>>();
+                assert_eq!(leaf_node.len(), 2);
+                let value_decoded = Rlp::new(leaf_node[1].data().unwrap());
+                assert!(value_decoded.is_list());
+
+                assert_eq!(trie_proof.1, hex::encode(value_decoded.iter().collect::<Vec<_>>()[2].data().unwrap()));
             }
         }
 
