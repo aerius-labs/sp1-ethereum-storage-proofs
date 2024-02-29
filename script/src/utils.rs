@@ -39,6 +39,159 @@ pub fn get_storage_proof(
         .output()
         .expect("Failed to execute command");
 
+    // Fetch block header
+    let data_string = format!(
+        r#"{{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["{}",false],"id":1}}"#,
+        bn
+    );
+
+    let output = Command::new("curl")
+        .arg("-X")
+        .arg("POST")
+        .arg("https://eth-mainnet.g.alchemy.com/v2/4km9U2L-ODSqptpYnzDYu3mBWQ6yd7Ww")
+        .arg("-d")
+        .arg(data_string)
+        .output()
+        .expect("Failed to execute command");
+
+    // const KECCAK256_RLP_ARRAY = Buffer.from(
+    //     '1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
+    //     'hex'
+    // );
+    //
+    // const KECCAK256_RLP_NULL = Buffer.from(
+    //     '56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421',
+    //     'hex'
+    // );
+    //
+    // const KECCAK256_NULL = Buffer.from(
+    //     'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470',
+    //     'hex'
+    // );
+
+    const KECCAK256_RLP_ARRAY: &str = "1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347";
+    const KECCAK256_RLP_NULL: &str = "56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
+    const KECCAK256_NULL: &str = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+
+    // convert header to Vec<u8> based on the following
+    // [
+    //     toBuffer(rpcResult.parentHash),
+    //     toBuffer(rpcResult.sha3Uncles) || KECCAK256_RLP_ARRAY,
+    //     toBuffer(rpcResult.miner),
+    //     toBuffer(rpcResult.stateRoot) || KECCAK256_NULL,
+    //     toBuffer(rpcResult.transactionsRoot) || KECCAK256_NULL,
+    //     toBuffer(rpcResult.receiptsRoot) || toBuffer(rpcResult.receiptRoot) || KECCAK256_NULL,
+    //     toBuffer(rpcResult.logsBloom),
+    //     toBuffer(rpcResult.difficulty),
+    //     toBuffer(rpcResult.number),
+    //     toBuffer(rpcResult.gasLimit),
+    //     toBuffer(rpcResult.gasUsed),
+    //     toBuffer(rpcResult.timestamp),
+    //     toBuffer(rpcResult.extraData),
+    //     toBuffer(rpcResult.mixHash),
+    //     toBuffer(rpcResult.nonce)
+    // ]
+
+    // Extract the block header
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: Value = serde_json::from_str(&stdout).unwrap();
+
+    println!("parsed: {:?}", parsed);
+    let parent_hash = parsed["result"]["parentHash"].as_str().unwrap();
+    let parent_hash = &parent_hash[2..];
+    let parent_hash = hex::decode(odd_to_even_hex(&parent_hash)).unwrap();
+    let sha3_uncles = parsed["result"]["sha3Uncles"].as_str().unwrap();
+    // if empty, use KECCAK256_RLP_ARRAY
+    let sha3_uncles = if sha3_uncles == "0x" {
+        KECCAK256_RLP_ARRAY
+    } else {
+        &sha3_uncles[2..]
+    };
+    let sha3_uncles = hex::decode(odd_to_even_hex(&sha3_uncles)).unwrap();
+    let miner = parsed["result"]["miner"].as_str().unwrap();
+    let miner = &miner[2..];
+    let miner = hex::decode(odd_to_even_hex(&miner)).unwrap();
+    let state_root = parsed["result"]["stateRoot"].as_str().unwrap();
+    // if empty, use KECCAK256_NULL
+    let state_root = if state_root == "0x0" {
+        KECCAK256_NULL
+    } else {
+        &state_root[2..]
+    };
+    let state_root = hex::decode(odd_to_even_hex(&state_root)).unwrap();
+    let transactions_root = parsed["result"]["transactionsRoot"].as_str().unwrap();
+    // if empty, use KECCAK256_NULL
+    let transactions_root = if transactions_root == "0x0" {
+        KECCAK256_NULL
+    } else {
+        &transactions_root[2..]
+    };
+    let transactions_root = hex::decode(odd_to_even_hex(&transactions_root)).unwrap();
+    let receipts_root = parsed["result"]["receiptsRoot"].as_str().unwrap();
+    // if empty, use KECCAK256_NULL
+    let receipts_root = if receipts_root == "0x0" {
+        KECCAK256_NULL
+    } else {
+        &receipts_root[2..]
+    };
+    let receipts_root = hex::decode(odd_to_even_hex(&receipts_root)).unwrap();
+    let logs_bloom = parsed["result"]["logsBloom"].as_str().unwrap();
+    let logs_bloom = &logs_bloom[2..];
+    let logs_bloom = hex::decode(odd_to_even_hex(&logs_bloom)).unwrap();
+    let difficulty = parsed["result"]["difficulty"].as_str().unwrap();
+    let difficulty = &difficulty[2..];
+    let difficulty = hex::decode(odd_to_even_hex(&difficulty)).unwrap();
+    let number = parsed["result"]["number"].as_str().unwrap();
+    let number = &number[2..];
+    let number = hex::decode(odd_to_even_hex(&number)).unwrap();
+    let gas_limit = parsed["result"]["gasLimit"].as_str().unwrap();
+    let gas_limit = &gas_limit[2..];
+    let gas_limit = hex::decode(odd_to_even_hex(&gas_limit)).unwrap();
+    let gas_used = parsed["result"]["gasUsed"].as_str().unwrap();
+    let gas_used = &gas_used[2..];
+    let gas_used = hex::decode(odd_to_even_hex(&gas_used)).unwrap();
+    let timestamp = parsed["result"]["timestamp"].as_str().unwrap();
+    let timestamp = &timestamp[2..];
+    let timestamp = hex::decode(odd_to_even_hex(&timestamp)).unwrap();
+    let extra_data = parsed["result"]["extraData"].as_str().unwrap();
+    let extra_data = &extra_data[2..];
+    let extra_data = hex::decode(odd_to_even_hex(&extra_data)).unwrap();
+    let mix_hash = parsed["result"]["mixHash"].as_str().unwrap();
+    let mix_hash = &mix_hash[2..];
+    let mix_hash = hex::decode(odd_to_even_hex(&mix_hash)).unwrap();
+    let nonce = parsed["result"]["nonce"].as_str().unwrap();
+    let nonce = &nonce[2..];
+    let nonce = hex::decode(odd_to_even_hex(&nonce)).unwrap();
+
+    let block_header = [
+        parent_hash,
+        sha3_uncles,
+        miner,
+        state_root,
+        transactions_root,
+        receipts_root,
+        logs_bloom,
+        difficulty,
+        number,
+        gas_limit,
+        gas_used,
+        timestamp,
+        extra_data,
+        mix_hash,
+        nonce,
+    ].into_iter().flatten().collect::<Vec<_>>();
+
+    let block_hash = {
+        let mut hasher = Keccak256::new();
+        hasher.update(&block_header);
+        let res = hasher.finalize();
+        hex::encode(res)
+    };
+
+    // check that block hash matches to the one in parsed
+    let block_hash_parsed = parsed["result"]["hash"].as_str().unwrap();
+    assert_eq!(block_hash, &block_hash_parsed[2..]);
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let parsed: Value = serde_json::from_str(&stdout).unwrap();
 
@@ -46,8 +199,8 @@ pub fn get_storage_proof(
     let storage_proof_value = parsed["result"]["storageProof"].clone();
     let storage_proof = storage_proof_value.as_array().unwrap()[0].clone();
 
-    let account_proof_vaue = parsed["result"]["accountProof"].clone();
-    let account_proof = account_proof_vaue.as_array().unwrap().clone();
+    let account_proof_value = parsed["result"]["accountProof"].clone();
+    let account_proof = account_proof_value.as_array().unwrap().clone();
 
     let storage_hash = parsed["result"]["storageHash"].as_str().unwrap();
     let storage_hash = &storage_hash[2..];
