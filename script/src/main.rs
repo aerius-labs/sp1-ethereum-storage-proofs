@@ -24,14 +24,13 @@ fn main() {
     println!("Proof generation time: {:?}", end.duration_since(start));
 
     let value = proof.stdout.read::<String>();
-
     println!("storage slot value: {}", value);
-
-    let ok = proof.stdout.read::<bool>();
-    assert_eq!(ok, true);
 
     let state_root = proof.stdout.read::<String>();
     println!("state root: {}", state_root);
+
+    let ok = proof.stdout.read::<bool>();
+    assert_eq!(ok, true);
 
     let start = std::time::Instant::now();
     // Verify proof.

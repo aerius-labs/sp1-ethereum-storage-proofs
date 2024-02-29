@@ -91,9 +91,9 @@ pub fn main() {
             assert!(value_decoded.is_list());
 
             assert_eq!(storage_root, hex::encode(value_decoded.iter().collect::<Vec<_>>()[2].data().unwrap()));
+            sp1_zkvm::io::write(&state_root);
         }
     }
 
     sp1_zkvm::io::write(&true);
-    sp1_zkvm::io::write(&state_root);
 }
